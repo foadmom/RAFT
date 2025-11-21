@@ -15,27 +15,35 @@ type natsConfigType struct {
 
 type channelType struct {
 	ID         string
-	channel    chan string
+	goChan     chan string
 	subscriber *nats.Subscription
 }
 
-var channels map[string]channelType = make(map[string]channelType)
+type raftCommsStruct struct {
+	natsCongig natsConfigType
+	nc         *nats.Conn
+	channels   map[string]channelType
+}
 
-var nc *nats.Conn
-var natsConfig natsConfigType = natsConfigType{}
+var raftComms raftCommsStruct = raftCommsStruct{}
 
 // ======================================================
 // init initializes package-level variables
 // ======================================================
 func init() {
+	raftComms.channels = make(map[string]channelType)
 
+}
+
+func GetInstance() *raftCommsStruct {
+	return &raftComms
 }
 
 // ======================================================
 // configStructure parses the JSON configuration string
 // ======================================================
 func configStructure(configJson string) error {
-	var _err error = json.Unmarshal([]byte(configJson), &natsConfig)
+	var _err error = json.Unmarshal([]byte(configJson), &raftComms.natsCongig)
 	if _err != nil {
 		fmt.Printf("Error parsing config JSON: %v\n", _err)
 	}
@@ -46,23 +54,45 @@ func configStructure(configJson string) error {
 // config string is a JSON string that defines all the
 // configuration parameters needed to initialize NATS
 // ======================================================
-func Init(config string) {
+func (raftCommsStruct) Init(config string) error {
 	var _err error
+	_ = configStructure(config)
+
 	_err = configStructure(config)
-	if _err != nil {
+	if _err == nil {
 		// Connect to a server
-		nc, _err = nats.Connect(nats.DefaultURL)
+		raftComms.nc, _err = nats.Connect(nats.DefaultURL)
 	}
 	if _err != nil {
 		fmt.Printf("NATS connection error: %v\n", _err)
 	}
+	return _err
 }
 
 // ======================================================
 // Close closes the NATS connection
 // ======================================================
-func Close() {
-	nc.Close()
+func (raftCommsStruct) Close() {
+	var _err error
+	for _, ch := range raftComms.channels {
+		if ch.subscriber != nil {
+			_err = ch.subscriber.Unsubscribe()
+			if _err == nil {
+				fmt.Printf("Unsubscribed from channel %s\n", ch.ID)
+				_err = ch.subscriber.Drain()
+				if _err == nil {
+					fmt.Printf("Drained from channel %s\n", ch.ID)
+					raftComms.nc.Close()
+					fmt.Printf("nats connection closed %s\n", ch.ID)
+
+				}
+			}
+		}
+		if _err != nil {
+			fmt.Printf("Error unsubscribing from channel %s: %v\n", ch.ID, _err)
+		}
+	}
+	raftComms.nc.Close()
 }
 
 // ======================================================
@@ -70,38 +100,25 @@ func Close() {
 // different from publishing to a queue group and only.
 // this message will go to all subscribers of the channel.
 // ======================================================
-func Send(message string, channel string) error {
+func (raftCommsStruct) Send(message string, channel string) error {
 	fmt.Println("Send message:", message)
 
-	return nc.Publish("simplePublisher", []byte(message))
+	return raftComms.nc.Publish(channel, []byte(message))
 }
 
 // ======================================================
-// ======================================================
-// ======================================================
-// ======================================================
-// ======================================================
-// ======================================================
-// ======================================================
-// ======================================================
-// ======================================================
-// ======================================================
-// ======================================================
-// ======================================================
-// ======================================================
-// ======================================================
-// ======================================================
 // Subscribe subscribes to a specified channel with a
 // ======================================================
-func Subscribe(channel string, subChannel chan string) error {
+func (raftCommsStruct) Subscribe(channel string, goChan chan string) error {
 	var _handler nats.MsgHandler = func(msg *nats.Msg) {
-		subChannel <- string(msg.Data)
+		_msg := string(msg.Data)
+		goChan <- _msg
 	}
-	_subs, _err := nc.Subscribe(channel, _handler)
+	_subs, _err := raftComms.nc.Subscribe(channel, _handler)
 	if _err == nil {
-		channels[channel] = channelType{
+		raftComms.channels[channel] = channelType{
 			ID:         channel,
-			channel:    subChannel,
+			goChan:     goChan,
 			subscriber: _subs,
 		}
 	}
@@ -114,15 +131,50 @@ func Subscribe(channel string, subChannel chan string) error {
 }
 
 // ======================================================
+//
+// ======================================================
+func (raftCommsStruct) UnSubscribe(channel string) error {
+	var _err error
+	ch, exists := raftComms.channels[channel]
+	if exists && ch.subscriber != nil {
+		_err = ch.subscriber.Unsubscribe()
+		if _err == nil {
+			fmt.Printf("Unsubscribed from channel %s\n", channel)
+			delete(raftComms.channels, channel)
+		}
+	} else {
+		_err = fmt.Errorf("no subscription found for channel %s", channel)
+	}
+	if _err != nil {
+		fmt.Printf("Error unsubscribing from channel %s: %v\n", channel, _err)
+	}
+	return _err
+}
+
+// ======================================================
+// ======================================================
+// ======================================================
+// ======================================================
+// ======================================================
+// ======================================================
+// ======================================================
+// ======================================================
+// ======================================================
+// ======================================================
+// ======================================================
+// ======================================================
+// ======================================================
+// ======================================================
+// ======================================================
 // handler for subscriber messages
 // ======================================================
-func asyncMessageHandler(msg *nats.Msg) {
-	fmt.Printf("Received a message: %s\n", string(msg.Data))
-}
+// func asyncMessageHandler(msg *nats.Msg) {
+// 	fmt.Printf("Received a message: %s\n", string(msg.Data))
+// }
 
 // ======================================================
 // listen subscribes to a specified channel with a
 // ======================================================
-func listen(channel string, handler nats.MsgHandler) (*nats.Subscription, error) {
-	return nc.QueueSubscribe(channel, "queueGroup", handler)
-}
+// func listen(channel string, handler nats.MsgHandler) (*nats.Subscription, error) {
+// 	return raftComms.nc.QueueSubscribe(channel, "queueGroup", handler)
+// }
