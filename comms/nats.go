@@ -1,5 +1,6 @@
 package comms
 
+// https://pkg.go.dev/github.com/nats-io/nats.go#section-readme
 import (
 	"encoding/json"
 	"fmt"
@@ -15,7 +16,7 @@ type natsConfigType struct {
 
 type channelType struct {
 	ID         string
-	goChan     chan string
+	goChan     chan []byte
 	subscriber *nats.Subscription
 }
 
@@ -100,19 +101,18 @@ func (raftCommsStruct) Close() {
 // different from publishing to a queue group and only.
 // this message will go to all subscribers of the channel.
 // ======================================================
-func (raftCommsStruct) Send(message string, channel string) error {
-	fmt.Println("Send message:", message)
+func (raftCommsStruct) Send(message []byte, channel string) error {
+	fmt.Println("Send message:", string(message))
 
-	return raftComms.nc.Publish(channel, []byte(message))
+	return raftComms.nc.Publish(channel, message)
 }
 
 // ======================================================
 // Subscribe subscribes to a specified channel with a
 // ======================================================
-func (raftCommsStruct) Subscribe(channel string, goChan chan string) error {
+func (raftCommsStruct) Subscribe(channel string, goChan chan []byte) error {
 	var _handler nats.MsgHandler = func(msg *nats.Msg) {
-		_msg := string(msg.Data)
-		goChan <- _msg
+		goChan <- msg.Data
 	}
 	_subs, _err := raftComms.nc.Subscribe(channel, _handler)
 	if _err == nil {
