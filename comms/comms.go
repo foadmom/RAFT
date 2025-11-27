@@ -3,8 +3,8 @@ package comms
 type commsInterface interface {
 	Init(config string) error
 	Close()
-	Send(message string, channel string) error
-	Subscribe(channel string, subChannel chan string) error
+	Send(message []byte, channel string) error
+	Subscribe(channel string, goChannel chan []byte) error
 	UnSubscribe(channel string) error
 }
 
@@ -22,11 +22,11 @@ func Close() {
 	Comms.Close()
 }
 
-func Send(message string, channel string) error {
+func Send(message []byte, channel string) error {
 	return Comms.Send(message, channel)
 }
 
-func Subscribe(channel string, goChan chan string) error {
+func Subscribe(channel string, goChan chan []byte) error {
 	return Comms.Subscribe(channel, goChan)
 }
 
