@@ -68,7 +68,9 @@ func leaderWorkflow() error {
 	var _err error
 	var _responseChannel chan []byte = make(chan []byte, 10)
 	var _HBTicker *time.Ticker = time.NewTicker(heartbeatInterval * time.Millisecond)
+	defer _HBTicker.Stop()
 	var _TimeOutTicker *time.Ticker = time.NewTicker(heartbeatTimeoutInterval * time.Millisecond)
+	defer _TimeOutTicker.Stop()
 
 	unsubscribeAll()
 	_err = comms.Subscribe(heartbeatResponseChannel, _responseChannel) // responses are ignored for now
@@ -76,7 +78,6 @@ func leaderWorkflow() error {
 		_err = sendHeartbeatRequest()
 	}
 	if _err == nil {
-		// loop:
 		for {
 			select {
 			case resp := <-_responseChannel:
@@ -88,18 +89,17 @@ func leaderWorkflow() error {
 					setNodeStatus(_msg)
 				}
 			case <-_HBTicker.C:
-				fmt.Println("Heartbeat interval elapsed, reseting ticker.")
+				fmt.Println("Heartbeat interval sending ping.")
 				// send heartbeat and wait for resp
 				_err = sendRequest(heartbeatRequestId, "", heartbeatChannel)
 				if _err == nil {
-					_HBTicker.Reset(heartbeatInterval * time.Millisecond)
+					// _HBTicker.Reset(heartbeatInterval * time.Millisecond)
 					// _TimeOutTicker.Reset(heartbeatTimeoutInterval * time.Millisecond)
 				}
-				// goto OuterLoop
 			case <-_TimeOutTicker.C:
 				fmt.Println("Hear_TimeOutTicker elapsed.")
 				printStati()
-				_TimeOutTicker.Reset(heartbeatTimeoutInterval * time.Millisecond)
+				// _TimeOutTicker.Reset(heartbeatTimeoutInterval * time.Millisecond)
 				// every once in a while all follower statuses are reset.
 				// the followers that do not respond in the timeout interval will remain "unknown"
 				// resetAllStati()
@@ -114,35 +114,30 @@ func leaderWorkflow() error {
 // ======================================================
 func followerWorkflow() error {
 	var _err error
-	unsubscribeAll()
 
 	myNodeMode = FOLLOWER
 	var heartbeatGoChan chan []byte = make(chan []byte, 10)
 	_err = comms.Subscribe(heartbeatChannel, heartbeatGoChan)
+	defer comms.UnSubscribe(heartbeatChannel)
 
 	if _err == nil {
 		// var _err error
 		var _ticker *time.Ticker = time.NewTicker(heartbeatTimeoutInterval * time.Millisecond)
-	loop:
+		defer _ticker.Stop()
 		for {
 			select {
 			case msg := <-heartbeatGoChan:
 				fmt.Println("Received heartbeat message:", string(msg))
-				_ticker.Reset(heartbeatTimeoutInterval * time.Millisecond)
 				_err = sendRequest(heartbeatResponseId, HEALTHY, heartbeatResponseChannel)
-				if _err != nil {
-					myNodeMode = UNKNOWN
-					break loop
+				if _err == nil {
+					_ticker.Reset(heartbeatTimeoutInterval * time.Millisecond)
 				}
 			case <-_ticker.C:
 				fmt.Printf("%v: No heartbeat message received in the last %v, exiting monitor.\n", time.Now(), heartbeatTimeoutInterval)
 				myNodeMode = ELECTION
-				break loop
+				return _err
 			}
 		}
-	}
-	if _err != nil {
-		fmt.Println("followerWorkflow: ", _err)
 	}
 	return _err
 }
@@ -155,63 +150,59 @@ func electionWorkflow() error {
 	var _err error
 	myNodeMode = ELECTION
 	fmt.Println("Starting election workflow")
-	unsubscribeAll()
 
 	var _electionGoChannel chan []byte = make(chan []byte, 10)
 	_err = comms.Subscribe(electionChannel, _electionGoChannel)
-	if _err != nil {
-		fmt.Println("Error subscribing to election channel:", _err)
-		return _err
-	}
+	if _err == nil {
+		defer comms.UnSubscribe(electionChannel)
 
-	var _randonmTimer int = GenerateRandomInt(0, int(electionTimeoutInterval))
-	var _ticker *time.Ticker = time.NewTicker((time.Duration(_randonmTimer) * time.Millisecond))
-	var _noOfVotes int = 0
-	for {
-		select {
-		case _msg := <-_electionGoChannel:
-			var _electionMessage genericMessage
-			fmt.Println("Received election message:", string(_msg))
-			_err = json.Unmarshal(_msg, &_electionMessage)
-			if _err != nil {
-				fmt.Println("Error unmarshaling election message:", _err)
-				continue
-			} else {
-				switch _electionMessage.RequestId {
-				case nominationtRequestId:
-					fmt.Println(" Another node has requested my vote, I vote for it and become follower")
-					_ticker.Reset(electionTimeoutInterval) // in case I wait and get nothing
-					sendRequest(electionVoteId, _electionMessage.Sender.UniqueId, electionChannel)
-					continue // wait for votes
-				case electionVoteId:
-					// _ticker.Reset(electionTimeoutInterval) // in case I wait and get nothing
-					if _electionMessage.Data == myNode.UniqueId {
-						fmt.Println(" I have received a vote for my leadership")
-						_noOfVotes++
-						if _noOfVotes > (len(statusMap) / 2) {
-							fmt.Println(" I have received majority votes, I become leader")
-							sendRequest(inaugurationRequestId, myNode.UniqueId, electionChannel)
-							myNodeMode = LEADER
-							return nil
-						} else {
-							continue // wait for more votes
+		var _randonmTimer int = GenerateRandomInt(0, int(electionTimeoutInterval))
+		var _ticker *time.Ticker = time.NewTicker((time.Duration(_randonmTimer) * time.Millisecond))
+		defer _ticker.Stop()
+		var _noOfVotes int = 0
+	LOOP:
+		for {
+			select {
+			case _msg := <-_electionGoChannel:
+				var _electionMessage genericMessage
+				fmt.Println("Received election message:", string(_msg))
+				_err = json.Unmarshal(_msg, &_electionMessage)
+				if _err == nil {
+					switch _electionMessage.RequestId {
+					case nominationtRequestId:
+						fmt.Println(" Another node has requested my vote, I vote for it and become follower")
+						_ticker.Reset(electionTimeoutInterval * time.Millisecond) // in case I wait and get nothing
+						sendRequest(electionVoteId, _electionMessage.Sender.UniqueId, electionChannel)
+					case electionVoteId:
+						if _electionMessage.Data == myNode.UniqueId {
+							fmt.Println(" I have received a vote for my leadership")
+							_noOfVotes++
+							if _noOfVotes > (len(statusMap) / 2) {
+								fmt.Println(" I have received majority votes, I become leader")
+								sendRequest(inaugurationRequestId, myNode.UniqueId, electionChannel)
+								myNodeMode = LEADER
+								break LOOP
+							}
 						}
+					case inaugurationRequestId:
+						fmt.Println(" New leader has been inaugurated, I become follower")
+						myNodeMode = FOLLOWER
+						break LOOP
 					}
-				case inaugurationRequestId:
-					fmt.Println(" New leader has been inaugurated, I become follower")
-					_ticker.Stop()
-					myNodeMode = FOLLOWER
-					return nil
 				}
+			case <-_ticker.C:
+				var _randonmTimer time.Duration = time.Duration(GenerateRandomInt(10, int(heartbeatTimeoutInterval))) * time.Millisecond
+				_ticker.Reset(_randonmTimer)
+				_ = sendRequest(nominationtRequestId, myNode.UniqueId, electionChannel)
+				// timeout elapsed, become leader
 			}
-		case <-_ticker.C:
-			var _randonmTimer time.Duration = time.Duration(GenerateRandomInt(10, int(heartbeatTimeoutInterval))) * time.Millisecond
-			_ticker.Reset(_randonmTimer)
-			_ = sendRequest(nominationtRequestId, myNode.UniqueId, electionChannel)
-			// timeout elapsed, become leader
-		}
 
+		}
 	}
+	if _err != nil {
+		fmt.Println("electionWorkflow: Error: ", _err)
+	}
+	return _err
 }
 
 // ========================================================
