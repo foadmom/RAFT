@@ -43,7 +43,10 @@ func main() {
 			case FOLLOWER:
 				_ = followerWorkflow()
 			case LEADER:
-				_ = leaderWorkflow()
+				_err = leaderWorkflow()
+				if _err != nil {
+					myNodeMode = FOLLOWER
+				}
 			case ELECTION:
 				_ = electionWorkflow()
 			default:
