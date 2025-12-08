@@ -30,6 +30,7 @@ const (
 	heartbeatInterval        = 1000
 	heartbeatTimeoutInterval = 3 * heartbeatInterval
 	electionTimeoutInterval  = 10 * heartbeatInterval
+	maxErrorCount            = 3
 )
 
 // ======================================================

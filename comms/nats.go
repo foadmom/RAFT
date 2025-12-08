@@ -61,7 +61,11 @@ func (raftCommsStruct) Init(config string) error {
 
 	_err = configStructure(config)
 	if _err == nil {
+		raftComms.Cleanup()
 		// Connect to a server
+		if raftComms.nc != nil {
+			raftComms.Close()
+		}
 		raftComms.nc, _err = nats.Connect(nats.DefaultURL)
 	}
 	if _err != nil {
@@ -74,26 +78,11 @@ func (raftCommsStruct) Init(config string) error {
 // Close closes the NATS connection
 // ======================================================
 func (raftCommsStruct) Close() {
-	var _err error
-	for _, ch := range raftComms.channels {
-		if ch.subscriber != nil {
-			_err = ch.subscriber.Unsubscribe()
-			if _err == nil {
-				fmt.Printf("Unsubscribed from channel %s\n", ch.ID)
-				_err = ch.subscriber.Drain()
-				if _err == nil {
-					fmt.Printf("Drained from channel %s\n", ch.ID)
-					raftComms.nc.Close()
-					fmt.Printf("nats connection closed %s\n", ch.ID)
-
-				}
-			}
-		}
-		if _err != nil {
-			fmt.Printf("Error unsubscribing from channel %s: %v\n", ch.ID, _err)
-		}
+	raftComms.Cleanup()
+	if raftComms.nc != nil {
+		raftComms.nc.Close()
+		fmt.Printf("nats connection closed.\n")
 	}
-	raftComms.nc.Close()
 }
 
 // ======================================================
@@ -148,6 +137,23 @@ func (raftCommsStruct) UnSubscribe(channel string) error {
 	if _err != nil {
 		fmt.Printf("Error unsubscribing from channel %s: %v\n", channel, _err)
 	}
+	return _err
+}
+
+// ======================================================
+//
+// ======================================================
+func (raftCommsStruct) Cleanup() error {
+	var _err error
+	if raftComms.nc != nil {
+		for _key, _channel := range raftComms.channels {
+			_ = _channel.subscriber.Unsubscribe()
+			_channel.subscriber.Drain()
+			fmt.Printf("Unsubscribed from channel %s\n", _key)
+		}
+	}
+	// clear the established channel infos
+	raftComms.channels = make(map[string]channelType)
 	return _err
 }
 

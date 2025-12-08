@@ -41,7 +41,10 @@ func main() {
 		for {
 			switch myNodeMode {
 			case FOLLOWER:
-				_ = followerWorkflow()
+				_err = followerWorkflow()
+				if _err != nil {
+					myNodeMode = ELECTION
+				}
 			case LEADER:
 				_err = leaderWorkflow()
 				if _err != nil {
@@ -81,31 +84,40 @@ func leaderWorkflow() error {
 		_err = sendHeartbeatRequest()
 	}
 	if _err == nil {
+		var _errCount int = 0
 		for {
 			select {
 			case resp := <-_responseChannel:
+				_TimeOutTicker.Reset(heartbeatTimeoutInterval * time.Millisecond)
 				fmt.Println("Received response:", string(resp))
 				var _msg genericMessage
 				// convert response from json and update status map
 				_msg, _err = convertMessageFromJson(resp)
 				if _err == nil {
 					setNodeStatus(_msg)
+					_errCount = 0
+				} else {
+					_errCount++
+					if _errCount > maxErrorCount {
+						return _err
+					}
 				}
 			case <-_HBTicker.C:
 				fmt.Println("Heartbeat interval sending ping.")
 				// send heartbeat and wait for resp
 				_err = sendRequest(heartbeatRequestId, "", heartbeatChannel)
 				if _err == nil {
-					// _HBTicker.Reset(heartbeatInterval * time.Millisecond)
-					// _TimeOutTicker.Reset(heartbeatTimeoutInterval * time.Millisecond)
+					_errCount = 0
+				} else {
+					_errCount++
+					if _errCount > maxErrorCount {
+						return _err
+					}
 				}
 			case <-_TimeOutTicker.C:
-				fmt.Println("Hear_TimeOutTicker elapsed.")
+				fmt.Println("We should not get here. Something has gone wrong. This means we have not received any responses for a while")
 				printStati()
-				// _TimeOutTicker.Reset(heartbeatTimeoutInterval * time.Millisecond)
-				// every once in a while all follower statuses are reset.
-				// the followers that do not respond in the timeout interval will remain "unknown"
-				// resetAllStati()
+				return _err
 			}
 		}
 	}
@@ -131,13 +143,14 @@ func followerWorkflow() error {
 			select {
 			case msg := <-heartbeatGoChan:
 				fmt.Println("Received heartbeat message:", string(msg))
+				_ticker.Reset(heartbeatTimeoutInterval * time.Millisecond)
 				_err = sendRequest(heartbeatResponseId, HEALTHY, heartbeatResponseChannel)
-				if _err == nil {
-					_ticker.Reset(heartbeatTimeoutInterval * time.Millisecond)
+				if _err != nil {
+					// this should never happen as send can only fail if messaging is down
+					return _err
 				}
 			case <-_ticker.C:
 				fmt.Printf("%v: No heartbeat message received in the last %v, exiting monitor.\n", time.Now(), heartbeatTimeoutInterval)
-				myNodeMode = ELECTION
 				return _err
 			}
 		}
@@ -175,14 +188,17 @@ func electionWorkflow() error {
 					case nominationtRequestId:
 						fmt.Println(" Another node has requested my vote, I vote for it and become follower")
 						_ticker.Reset(electionTimeoutInterval * time.Millisecond) // in case I wait and get nothing
-						sendRequest(electionVoteId, _electionMessage.Sender.UniqueId, electionChannel)
+						_err = sendRequest(electionVoteId, _electionMessage.Sender.UniqueId, electionChannel)
+						if _err != nil {
+							return _err
+						}
 					case electionVoteId:
 						if _electionMessage.Data == myNode.UniqueId {
 							fmt.Println(" I have received a vote for my leadership")
 							_noOfVotes++
 							if _noOfVotes > (len(statusMap) / 2) {
 								fmt.Println(" I have received majority votes, I become leader")
-								sendRequest(inaugurationRequestId, myNode.UniqueId, electionChannel)
+								_err = sendRequest(inaugurationRequestId, myNode.UniqueId, electionChannel)
 								myNodeMode = LEADER
 								break LOOP
 							}

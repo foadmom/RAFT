@@ -6,16 +6,19 @@ type commsInterface interface {
 	Send(message []byte, channel string) error
 	Subscribe(channel string, goChannel chan []byte) error
 	UnSubscribe(channel string) error
+	Cleanup() error
 }
 
 var Comms commsInterface
+var gConfig string
 
 func init() {
 	Comms = GetInstance()
 }
 
 func Init(config string) error {
-	return Comms.Init(config)
+	gConfig = config
+	return Comms.Init(gConfig)
 }
 
 func Close() {
@@ -23,7 +26,14 @@ func Close() {
 }
 
 func Send(message []byte, channel string) error {
-	return Comms.Send(message, channel)
+	var _err error = Comms.Send(message, channel)
+	if _err != nil {
+		_err = Init(gConfig)
+		if _err == nil {
+			_err = Comms.Send(message, channel)
+		}
+	}
+	return _err
 }
 
 func Subscribe(channel string, goChan chan []byte) error {
