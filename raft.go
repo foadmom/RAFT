@@ -21,6 +21,9 @@ var myNodeMode string
 var statusMap map[string]genericMessage = make(map[string]genericMessage, 10)
 var messageTemplate genericMessage // used to send heartbeat messages
 
+// ==================================================================
+//
+// ==================================================================
 func init() {
 	var _processID string = strconv.FormatInt(int64(os.Getpid()), 16) // this should be unique per process in a real implementation
 	_hostName, _ := os.Hostname()
@@ -31,11 +34,30 @@ func init() {
 	messageTemplate = genericMessage{heartbeatRequestId, "", myNode, ""}
 }
 
+// ==================================================================
+//
+//	     ┌────────────┐
+//	     │   Follower ◄─────┐
+//	     └──────┬─────┘     │
+//	            │           │
+//	     ┌──────▼─────┐     │
+//	     │  Election  │     │
+//	     └──┬──────┬──┘     │
+//	        │      │        │
+//	┌───────▼─┐    └────────┤
+//	│ Leader  │             │
+//	└───────┬─┘             │
+//	        │               │
+//	        └───────────────┘
+//
+// ==================================================================
 func main() {
 	var _err error
 	// Initialize NATS with the configuration
 	myNodeMode = FOLLOWER
 	_err = comms.Init(`{"url": "nats://localhost:4222"}`)
+	// var _debugTimer time.Ticker = *time.NewTicker(debugInterval * time.Millisecond)
+	// defer _debugTimer.Stop()
 	if _err == nil {
 		// the main loop
 		for {
@@ -51,7 +73,11 @@ func main() {
 					myNodeMode = FOLLOWER
 				}
 			case ELECTION:
-				_ = electionWorkflow()
+				_err = electionWorkflow()
+				if _err != nil {
+					// if any error redo the election via going through FOLLOWER
+					myNodeMode = FOLLOWER
+				}
 			default:
 				myNodeMode = FOLLOWER
 			}
@@ -172,14 +198,20 @@ func electionWorkflow() error {
 	if _err == nil {
 		defer comms.UnSubscribe(electionChannel)
 
+		// every node will backoff for a random amount of time.
+		// If by then no node has put itself forward for leader, then I will put myself forward
 		var _randonmTimer int = GenerateRandomInt(0, int(electionTimeoutInterval))
-		var _ticker *time.Ticker = time.NewTicker((time.Duration(_randonmTimer) * time.Millisecond))
-		defer _ticker.Stop()
+		var _randomTimeout *time.Timer = time.NewTimer((time.Duration(_randonmTimer) * time.Millisecond))
+		defer _randomTimeout.Stop()
+		// we also need a timeout where we call it quits because election has not produced a leader
+		var _timeout *time.Timer = time.NewTimer((electionTimeoutInterval * time.Millisecond))
+		defer _timeout.Stop()
 		var _noOfVotes int = 0
 	LOOP:
 		for {
 			select {
 			case _msg := <-_electionGoChannel:
+				_randomTimeout.Stop() // now we wait for voting to finish
 				var _electionMessage genericMessage
 				fmt.Println("Received election message:", string(_msg))
 				_err = json.Unmarshal(_msg, &_electionMessage)
@@ -187,10 +219,9 @@ func electionWorkflow() error {
 					switch _electionMessage.RequestId {
 					case nominationtRequestId:
 						fmt.Println(" Another node has requested my vote, I vote for it and become follower")
-						_ticker.Reset(electionTimeoutInterval * time.Millisecond) // in case I wait and get nothing
 						_err = sendRequest(electionVoteId, _electionMessage.Sender.UniqueId, electionChannel)
 						if _err != nil {
-							return _err
+							break LOOP
 						}
 					case electionVoteId:
 						if _electionMessage.Data == myNode.UniqueId {
@@ -209,11 +240,15 @@ func electionWorkflow() error {
 						break LOOP
 					}
 				}
-			case <-_ticker.C:
-				var _randonmTimer time.Duration = time.Duration(GenerateRandomInt(10, int(heartbeatTimeoutInterval))) * time.Millisecond
-				_ticker.Reset(_randonmTimer)
-				_ = sendRequest(nominationtRequestId, myNode.UniqueId, electionChannel)
-				// timeout elapsed, become leader
+			case <-_randomTimeout.C:
+				_err = sendRequest(nominationtRequestId, myNode.UniqueId, electionChannel)
+				if _err != nil {
+					break LOOP
+				}
+			case <-_timeout.C:
+				// This should not happen
+				_err = fmt.Errorf("no resolution of the election within the specified period")
+				break LOOP
 			}
 
 		}
