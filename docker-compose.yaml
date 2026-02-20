@@ -1,0 +1,12 @@
+  services:
+    raft:
+      build: .
+      image: app/raft
+      extra_hosts:
+        - "host.docker.internal:host-gateway"
+        # - "nats_server:172.17.0.1"
+        # - "nats_server:host-gateway"
+      # environment:
+      #   - nats_server=host.docker.internal
+      # ports:
+      #   - "host.docker.internal:4222:4222"

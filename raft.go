@@ -55,7 +55,10 @@ func main() {
 	var _err error
 	// Initialize NATS with the configuration
 	myNodeMode = FOLLOWER
-	_err = comms.Init(`{"url": "nats://localhost:4222"}`)
+	// _err = comms.Init(`{"url": "nats://localhost:4222"}`)
+	_err = comms.Init(`{"url": "nats://host.docker.internal:4222"}`)
+	// _err = comms.Init(`{"url": "nats://nats_server:4222"}`)
+	// _err = comms.Init(`{"url": "nats://172.17.0.1:4222"}`)
 	// var _debugTimer time.Ticker = *time.NewTicker(debugInterval * time.Millisecond)
 	// defer _debugTimer.Stop()
 	if _err == nil {
@@ -177,6 +180,7 @@ func followerWorkflow() error {
 				}
 			case <-_ticker.C:
 				fmt.Printf("%v: No heartbeat message received in the last %v, exiting monitor.\n", time.Now(), heartbeatTimeoutInterval)
+				_err = fmt.Errorf("no resolution of the election within the specified period")
 				return _err
 			}
 		}
@@ -305,6 +309,7 @@ func sendHeartbeatRequest() error {
 //
 // ======================================================
 func unsubscribeAll() {
+
 	_ = comms.UnSubscribe(electionChannel)
 	_ = comms.UnSubscribe(heartbeatChannel)
 	_ = comms.UnSubscribe(heartbeatResponseChannel)
