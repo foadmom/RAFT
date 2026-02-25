@@ -1,8 +1,8 @@
 module github.com/foadmom/RAFT
 
-go 1.25.4
+go 1.26.0
 
-require github.com/nats-io/nats.go v1.47.0
+require github.com/nats-io/nats.go v1.48.0
 
 require (
 	github.com/klauspost/compress v1.18.0 // indirect

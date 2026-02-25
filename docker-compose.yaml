@@ -1,12 +1,30 @@
   services:
     raft:
-      build: .
-      image: app/raft
-      extra_hosts:
-        - "host.docker.internal:host-gateway"
-        # - "nats_server:172.17.0.1"
-        # - "nats_server:host-gateway"
-      # environment:
-      #   - nats_server=host.docker.internal
+      # build: .
+      image: raft
+      hostname: raft
       # ports:
-      #   - "host.docker.internal:4222:4222"
+        # - "4222:4222"
+        # - "8222:8222"
+        # - "6222:6222"
+      networks:
+        - nats
+      depends_on:
+        - nats
+    nats:
+      image: nats:latest
+      expose:
+        - "4222"
+        - "8222"
+        - "6222"
+    #   ports:
+    #     - "4222"
+    #     - "8222"
+    #     - "6222"
+      networks:
+        - nats
+
+  networks:
+    nats:
+      driver: bridge
+

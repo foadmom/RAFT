@@ -3,7 +3,9 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"math/rand"
+	"net"
 	"os"
 	"strconv"
 	"time"
@@ -27,6 +29,8 @@ var messageTemplate genericMessage // used to send heartbeat messages
 func init() {
 	var _processID string = strconv.FormatInt(int64(os.Getpid()), 16) // this should be unique per process in a real implementation
 	_hostName, _ := os.Hostname()
+	fmt.Printf("RAFT's container hostname is %s\n", _hostName)
+
 	_uniqueId := fmt.Sprintf("%s-%s", _hostName, _processID)
 	myNode = nodeHost{_hostName, _processID, _uniqueId}
 	myNodeMode = UNKNOWN
@@ -51,16 +55,24 @@ func init() {
 //	        └───────────────┘
 //
 // ==================================================================
+func hostnames(hostname string) {
+	var err error
+	addrs, err := net.LookupIP(hostname) // returns a slice of the IP addresses of the host
+	// lookupIP looks up host using the local resolver. It returns a slice of that host's IPv4 and IPv6 addresses.
+	if err != nil {
+		log.Println("Failed to detect machine host name. ", err.Error())
+		return
+	}
+	log.Printf("hostname %s Addrs: %v", hostname, addrs)
+}
+
 func main() {
 	var _err error
 	// Initialize NATS with the configuration
 	myNodeMode = FOLLOWER
+	hostnames("nats")
 	// _err = comms.Init(`{"url": "nats://localhost:4222"}`)
-	_err = comms.Init(`{"url": "nats://host.docker.internal:4222"}`)
-	// _err = comms.Init(`{"url": "nats://nats_server:4222"}`)
-	// _err = comms.Init(`{"url": "nats://172.17.0.1:4222"}`)
-	// var _debugTimer time.Ticker = *time.NewTicker(debugInterval * time.Millisecond)
-	// defer _debugTimer.Stop()
+	_err = comms.Init(`{"url": "nats://nats:4222"}`)
 	if _err == nil {
 		// the main loop
 		for {
