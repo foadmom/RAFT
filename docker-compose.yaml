@@ -1,30 +1,24 @@
   services:
     raft:
       # build: .
-      image: raft
-      hostname: raft
-      # ports:
-        # - "4222:4222"
-        # - "8222:8222"
-        # - "6222:6222"
+      image: "raft"
+      hostname: "raft"
       networks:
-        - nats
+        - "nats-network"
       depends_on:
-        - nats
+        - "nats"
     nats:
-      image: nats:latest
+      image: "nats:latest"
+      hostname: "nats-server"
       expose:
         - "4222"
         - "8222"
         - "6222"
-    #   ports:
-    #     - "4222"
-    #     - "8222"
-    #     - "6222"
       networks:
-        - nats
+        - "nats-network"
+    
 
   networks:
-    nats:
+    nats-network:
       driver: bridge
 

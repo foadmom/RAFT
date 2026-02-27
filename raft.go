@@ -66,13 +66,49 @@ func hostnames(hostname string) {
 	log.Printf("hostname %s Addrs: %v", hostname, addrs)
 }
 
+// ======================================================
+// code provided by: Rustavil Nurkaev
+// This is just to test connectivity to the other nodes in the cluster.
+// ======================================================
+func RawConnect(host string, ports []string) {
+	for _, port := range ports {
+		timeout := time.Second
+		conn, err := net.DialTimeout("tcp", net.JoinHostPort(host, port), timeout)
+		if err != nil {
+			fmt.Println("Connecting error:", err)
+		}
+		if conn != nil {
+			defer conn.Close()
+			fmt.Println("Opened", net.JoinHostPort(host, port))
+		} else {
+			fmt.Println("Failed to connect to", net.JoinHostPort(host, port))
+		}
+	}
+}
+
+// ======================================================
+//
+// ======================================================
 func main() {
 	var _err error
 	// Initialize NATS with the configuration
 	myNodeMode = FOLLOWER
-	hostnames("nats")
+	// hostnames("nats")
+	var hostname string = "nats-server"
+	addrs, err := net.LookupIP(hostname)
+	nats_address := fmt.Sprintf("%s", addrs[0])
+	if err == nil {
+		fmt.Printf("Host %s has the following addresses: %s\n", hostname, nats_address)
+	} else {
+		fmt.Printf("Failed to lookup IP addresses for host %s: %v\n", hostname, err)
+	}
+	RawConnect(hostname, []string{"4222"})
+	RawConnect(nats_address, []string{"4222"})
 	// _err = comms.Init(`{"url": "nats://localhost:4222"}`)
-	_err = comms.Init(`{"url": "nats://nats:4222"}`)
+	var connectionString string = fmt.Sprintf(`{"url": "nats://%s:4222"}`, nats_address)
+	fmt.Printf("the connection string is %s\n", connectionString)
+	_err = comms.Init(connectionString)
+	// _err = comms.Init(`{"url": "nats://nats-server:4222"}`)
 	if _err == nil {
 		// the main loop
 		for {
