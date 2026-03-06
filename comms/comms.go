@@ -1,5 +1,11 @@
 package comms
 
+import (
+	"fmt"
+	"net"
+	"time"
+)
+
 type commsInterface interface {
 	Init(config string) error
 	Close()
@@ -42,4 +48,24 @@ func Subscribe(channel string, goChan chan []byte) error {
 
 func UnSubscribe(channel string) error {
 	return Comms.UnSubscribe(channel)
+}
+
+// ======================================================
+// code provided by: Rustavil Nurkaev
+// This is just to test connectivity to the other nodes in the cluster.
+// ======================================================
+func RawConnect(host string, ports []string) {
+	for _, port := range ports {
+		timeout := time.Second
+		conn, err := net.DialTimeout("tcp", net.JoinHostPort(host, port), timeout)
+		if err != nil {
+			fmt.Println("Connecting error:", err)
+		}
+		if conn != nil {
+			defer conn.Close()
+			fmt.Println("Opened", net.JoinHostPort(host, port))
+		} else {
+			fmt.Println("Failed to connect to", net.JoinHostPort(host, port))
+		}
+	}
 }

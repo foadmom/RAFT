@@ -57,7 +57,7 @@ func configStructure(configJson string) error {
 // ======================================================
 func (raftCommsStruct) Init(config string) error {
 	var _err error
-	_ = configStructure(config)
+	// _ = configStructure(config)
 
 	_err = configStructure(config)
 	if _err == nil {
@@ -66,10 +66,11 @@ func (raftCommsStruct) Init(config string) error {
 		if raftComms.nc != nil {
 			raftComms.Close()
 		}
-		raftComms.nc, _err = nats.Connect(nats.DefaultURL)
+		// raftComms.nc, _err = nats.Connect(nats.DefaultURL)
+		raftComms.nc, _err = nats.Connect(raftComms.natsCongig.URL)
 	}
 	if _err != nil {
-		fmt.Printf("NATS connection error: %v\n", _err)
+		fmt.Printf("NATS connection error to %s: %v\n", raftComms.natsCongig.URL, _err)
 	}
 	return _err
 }

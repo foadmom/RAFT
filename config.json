@@ -1,0 +1,52 @@
+{
+	"Environment":
+	{
+		"Dev":
+		{
+			"HTTP":
+			{
+				"Host": "localhost",
+				"Port": "8001"
+			},
+			"Database": 
+			{
+				"Name"      : "localPostgres",
+				"Driver"    : "pgx",
+				"Host"      : "localhost", 
+				"Port"      : "5432", 
+				"User"      : "postgres", 
+				"Password"  : "postgres", 
+				"Database"  : "transmodel", 
+				"Schema"    : "common"
+			},
+			"Nats":
+			{
+				"URL": "nats://nats_server:4222"
+			}
+		},
+		"Test":
+		{
+			"HTTP":
+			{
+				"Host": "localhost",
+				"Port": "8080"
+			},
+			"Database": 
+			{
+				"Name"      : "testDB",
+				"Driver"    : "pgx",
+				"Host"      : "test.db.server", 
+				"Port"      : "5432", 
+				"User"      : "postgres", 
+				"Password"  : "postgres", 
+				"Database"  : "transmodel", 
+				"Schema"    : "common"
+			},
+			"Nats":
+			{
+				"URL": "nats://nats_server:4222"
+			}
+		}
+
+	}
+}

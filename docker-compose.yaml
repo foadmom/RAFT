@@ -3,6 +3,8 @@
       # build: .
       image: "raft"
       hostname: "raft"
+      # options:
+      #   - servers: {"nats-server:4222"}
       networks:
         - "nats-network"
       depends_on:
@@ -14,6 +16,8 @@
         - "4222"
         - "8222"
         - "6222"
+      ports:
+        - "8222:8222"
       networks:
         - "nats-network"
     

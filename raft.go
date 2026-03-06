@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/foadmom/RAFT/comms"
-	// "github.com/foadmom/RAFT/comms"
+	c "github.com/foadmom/common/config"
 )
 
 const TIME_FORMAT = "2006-01-02T15:04:05,000"
@@ -67,48 +67,16 @@ func hostnames(hostname string) {
 }
 
 // ======================================================
-// code provided by: Rustavil Nurkaev
-// This is just to test connectivity to the other nodes in the cluster.
-// ======================================================
-func RawConnect(host string, ports []string) {
-	for _, port := range ports {
-		timeout := time.Second
-		conn, err := net.DialTimeout("tcp", net.JoinHostPort(host, port), timeout)
-		if err != nil {
-			fmt.Println("Connecting error:", err)
-		}
-		if conn != nil {
-			defer conn.Close()
-			fmt.Println("Opened", net.JoinHostPort(host, port))
-		} else {
-			fmt.Println("Failed to connect to", net.JoinHostPort(host, port))
-		}
-	}
-}
-
-// ======================================================
 //
 // ======================================================
 func main() {
 	var _err error
 	// Initialize NATS with the configuration
 	myNodeMode = FOLLOWER
-	// hostnames("nats")
 	var hostname string = "nats-server"
-	addrs, err := net.LookupIP(hostname)
-	nats_address := fmt.Sprintf("%s", addrs[0])
-	if err == nil {
-		fmt.Printf("Host %s has the following addresses: %s\n", hostname, nats_address)
-	} else {
-		fmt.Printf("Failed to lookup IP addresses for host %s: %v\n", hostname, err)
-	}
-	RawConnect(hostname, []string{"4222"})
-	RawConnect(nats_address, []string{"4222"})
 	// _err = comms.Init(`{"url": "nats://localhost:4222"}`)
-	var connectionString string = fmt.Sprintf(`{"url": "nats://%s:4222"}`, nats_address)
-	fmt.Printf("the connection string is %s\n", connectionString)
+	var connectionString string = fmt.Sprintf(`{"url": "nats://%s:4222"}`, hostname)
 	_err = comms.Init(connectionString)
-	// _err = comms.Init(`{"url": "nats://nats-server:4222"}`)
 	if _err == nil {
 		// the main loop
 		for {
@@ -136,6 +104,17 @@ func main() {
 	}
 	// Now you can use the comms package to interact with NATS
 	fmt.Println("natsTest completed")
+}
+
+// ======================================================
+//
+// ======================================================
+func getNatsConfig(fileName string, env string) (string, error) {
+	_config, _err := c.GetConfigFromFile(fileName)
+	if _err == nil {
+		_config, _err = c.GetKeyMap(_config, env)
+	}
+	return _config, _err
 }
 
 // ======================================================
