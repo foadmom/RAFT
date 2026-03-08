@@ -11,7 +11,10 @@ import (
 )
 
 type natsConfigType struct {
-	URL string `json:"url"`
+	URL            string `json:"URL"`
+	ClusterPort    string `json:"ClusterPort"`
+	ClusterName    string `json:"ClusterName"`
+	ManagementPort string `json:"ManagementPort"`
 }
 
 type channelType struct {

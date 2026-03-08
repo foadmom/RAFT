@@ -3,7 +3,7 @@ module github.com/foadmom/RAFT
 go 1.26.1
 
 require (
-	github.com/foadmom/common v0.0.0-20260216152036-051994818295
+	github.com/foadmom/common v0.0.0-20260306151221-a27406023a92
 	github.com/nats-io/nats.go v1.49.0
 )
 
@@ -14,6 +14,6 @@ require (
 	github.com/nats-io/nkeys v0.4.12 // indirect
 	github.com/nats-io/nuid v1.0.1 // indirect
 	github.com/rs/zerolog v1.34.0 // indirect
-	golang.org/x/crypto v0.46.0 // indirect
-	golang.org/x/sys v0.39.0 // indirect
+	golang.org/x/crypto v0.48.0 // indirect
+	golang.org/x/sys v0.41.0 // indirect
 )
