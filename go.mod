@@ -2,8 +2,10 @@ module github.com/foadmom/RAFT
 
 go 1.26.1
 
+replace github.com/foadmom/common => ../common
+
 require (
-	github.com/foadmom/common v0.0.0-20260306151221-a27406023a92
+	github.com/foadmom/common v0.0.0
 	github.com/nats-io/nats.go v1.49.0
 )
 

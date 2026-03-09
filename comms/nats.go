@@ -10,7 +10,7 @@ import (
 	"github.com/nats-io/nats.go"
 )
 
-type natsConfigType struct {
+type NatsConfig struct {
 	URL            string `json:"URL"`
 	ClusterPort    string `json:"ClusterPort"`
 	ClusterName    string `json:"ClusterName"`
@@ -19,14 +19,14 @@ type natsConfigType struct {
 
 type channelType struct {
 	ID         string
-	goChan     chan []byte
-	subscriber *nats.Subscription
+	GoChan     chan []byte
+	Subscriber *nats.Subscription
 }
 
 type raftCommsStruct struct {
-	natsCongig natsConfigType
-	nc         *nats.Conn
-	channels   map[string]channelType
+	NatsCongig NatsConfig
+	Nc         *nats.Conn
+	Channels   map[string]channelType
 }
 
 var raftComms raftCommsStruct = raftCommsStruct{}
@@ -35,7 +35,7 @@ var raftComms raftCommsStruct = raftCommsStruct{}
 // init initializes package-level variables
 // ======================================================
 func init() {
-	raftComms.channels = make(map[string]channelType)
+	raftComms.Channels = make(map[string]channelType)
 
 }
 
@@ -47,7 +47,7 @@ func GetInstance() *raftCommsStruct {
 // configStructure parses the JSON configuration string
 // ======================================================
 func configStructure(configJson string) error {
-	var _err error = json.Unmarshal([]byte(configJson), &raftComms.natsCongig)
+	var _err error = json.Unmarshal([]byte(configJson), &raftComms.NatsCongig)
 	if _err != nil {
 		fmt.Printf("Error parsing config JSON: %v\n", _err)
 	}
@@ -66,14 +66,14 @@ func (raftCommsStruct) Init(config string) error {
 	if _err == nil {
 		raftComms.Cleanup()
 		// Connect to a server
-		if raftComms.nc != nil {
+		if raftComms.Nc != nil {
 			raftComms.Close()
 		}
 		// raftComms.nc, _err = nats.Connect(nats.DefaultURL)
-		raftComms.nc, _err = nats.Connect(raftComms.natsCongig.URL)
+		raftComms.Nc, _err = nats.Connect(raftComms.NatsCongig.URL)
 	}
 	if _err != nil {
-		fmt.Printf("NATS connection error to %s: %v\n", raftComms.natsCongig.URL, _err)
+		fmt.Printf("NATS connection error to %s: %v\n", raftComms.NatsCongig.URL, _err)
 	}
 	return _err
 }
@@ -83,8 +83,8 @@ func (raftCommsStruct) Init(config string) error {
 // ======================================================
 func (raftCommsStruct) Close() {
 	raftComms.Cleanup()
-	if raftComms.nc != nil {
-		raftComms.nc.Close()
+	if raftComms.Nc != nil {
+		raftComms.Nc.Close()
 		fmt.Printf("nats connection closed.\n")
 	}
 }
@@ -97,7 +97,7 @@ func (raftCommsStruct) Close() {
 func (raftCommsStruct) Send(message []byte, channel string) error {
 	fmt.Println("Send message:", string(message))
 
-	return raftComms.nc.Publish(channel, message)
+	return raftComms.Nc.Publish(channel, message)
 }
 
 // ======================================================
@@ -107,12 +107,12 @@ func (raftCommsStruct) Subscribe(channel string, goChan chan []byte) error {
 	var _handler nats.MsgHandler = func(msg *nats.Msg) {
 		goChan <- msg.Data
 	}
-	_subs, _err := raftComms.nc.Subscribe(channel, _handler)
+	_subs, _err := raftComms.Nc.Subscribe(channel, _handler)
 	if _err == nil {
-		raftComms.channels[channel] = channelType{
+		raftComms.Channels[channel] = channelType{
 			ID:         channel,
-			goChan:     goChan,
-			subscriber: _subs,
+			GoChan:     goChan,
+			Subscriber: _subs,
 		}
 	}
 	if _err != nil {
@@ -128,12 +128,12 @@ func (raftCommsStruct) Subscribe(channel string, goChan chan []byte) error {
 // ======================================================
 func (raftCommsStruct) UnSubscribe(channel string) error {
 	var _err error
-	ch, exists := raftComms.channels[channel]
-	if exists && ch.subscriber != nil {
-		_err = ch.subscriber.Unsubscribe()
+	ch, exists := raftComms.Channels[channel]
+	if exists && ch.Subscriber != nil {
+		_err = ch.Subscriber.Unsubscribe()
 		if _err == nil {
 			fmt.Printf("Unsubscribed from channel %s\n", channel)
-			delete(raftComms.channels, channel)
+			delete(raftComms.Channels, channel)
 		}
 	} else {
 		_err = fmt.Errorf("no subscription found for channel %s", channel)
@@ -149,15 +149,15 @@ func (raftCommsStruct) UnSubscribe(channel string) error {
 // ======================================================
 func (raftCommsStruct) Cleanup() error {
 	var _err error
-	if raftComms.nc != nil {
-		for _key, _channel := range raftComms.channels {
-			_ = _channel.subscriber.Unsubscribe()
-			_channel.subscriber.Drain()
+	if raftComms.Nc != nil {
+		for _key, _channel := range raftComms.Channels {
+			_ = _channel.Subscriber.Unsubscribe()
+			_channel.Subscriber.Drain()
 			fmt.Printf("Unsubscribed from channel %s\n", _key)
 		}
 	}
 	// clear the established channel infos
-	raftComms.channels = make(map[string]channelType)
+	raftComms.Channels = make(map[string]channelType)
 	return _err
 }
 

@@ -21,7 +21,7 @@
 			},
 			"Nats":
 			{
-				"URL": "nats://nats_server:4222",
+				"URL": "nats://nats-server:4222",
                 "ClusterPort": "6222",
                 "ClusterName": "test-cluster",
                 "managementPort": "8222"
@@ -47,7 +47,7 @@
 			},
 			"Nats":
 			{
-				"URL": "nats://nats_server:4222",
+				"URL": "nats://nats-server:4222",
                 "ClusterPort": "6222",
                 "ClusterName": "test-cluster",
                 "managementPort": "8222"

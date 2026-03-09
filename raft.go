@@ -22,6 +22,7 @@ var myNodeMode string
 // for leader to keep track of nodes stati. the key is the node UniqueId
 var statusMap map[string]genericMessage = make(map[string]genericMessage, 10)
 var messageTemplate genericMessage // used to send heartbeat messages
+var natsConfig comms.NatsConfig = comms.NatsConfig{}
 
 // ==================================================================
 //
@@ -30,6 +31,15 @@ func init() {
 	var _processID string = strconv.FormatInt(int64(os.Getpid()), 16) // this should be unique per process in a real implementation
 	_hostName, _ := os.Hostname()
 	fmt.Printf("RAFT's container hostname is %s\n", _hostName)
+
+	_json, _err := c.FindKeyedSubJson("config.json", "Environment.Dev.Nats")
+	if _err == nil {
+		json.Unmarshal([]byte(_json), &natsConfig)
+	} else {
+		_err = nil
+		log.Printf("Error reading NATS config: %v\n", _err)
+		natsConfig.URL = "nats://localhost:4222" // default value
+	}
 
 	_uniqueId := fmt.Sprintf("%s-%s", _hostName, _processID)
 	myNode = nodeHost{_hostName, _processID, _uniqueId}
@@ -71,11 +81,13 @@ func hostnames(hostname string) {
 // ======================================================
 func main() {
 	var _err error
-	// Initialize NATS with the configuration
+
+	fmt.Println("Application staring")
 	myNodeMode = FOLLOWER
-	var hostname string = "nats-server"
 	// _err = comms.Init(`{"url": "nats://localhost:4222"}`)
-	var connectionString string = fmt.Sprintf(`{"url": "nats://%s:4222"}`, hostname)
+
+	var connectionString string = fmt.Sprintf(`{"url": "%s"}`, natsConfig.URL)
+	fmt.Printf("connecting to %s\n", connectionString)
 	_err = comms.Init(connectionString)
 	if _err == nil {
 		// the main loop
@@ -109,13 +121,13 @@ func main() {
 // ======================================================
 //
 // ======================================================
-func getNatsConfig(fileName string, env string) (string, error) {
-	_config, _err := c.GetConfigFromFile(fileName)
-	if _err == nil {
-		_config, _err = c.GetKeyMap(_config, env)
-	}
-	return _config, _err
-}
+// func getNatsConfig(fileName string, env string) (string, error) {
+// 	_config, _err := c.GetConfigFromFile(fileName)
+// 	if _err == nil {
+// 		_config, _err = c.GetKeyMap(_config, env)
+// 	}
+// 	return _config, _err
+// }
 
 // ======================================================
 // leaderWorkflow sends heartbeat messages periodically
