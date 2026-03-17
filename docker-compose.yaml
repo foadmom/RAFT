@@ -1,5 +1,6 @@
   services:
-    raft:
+    
+    raft_1:
       # build: .
       image: "raft"
       hostname: "raft"
@@ -9,17 +10,67 @@
         - "nats-network"
       depends_on:
         - "nats"
+    raft_2:
+      # build: .
+      image: "raft"
+      hostname: "raft"
+      # options:
+      #   - servers: {"nats-server:4222"}
+      networks:
+        - "nats-network"
+      depends_on:
+        - "raft_1"
+    raft_3:
+      # build: .
+      image: "raft"
+      hostname: "raft"
+      # options:
+      #   - servers: {"nats-server:4222"}
+      networks:
+        - "nats-network"
+      depends_on:
+        - "raft_2"
+    raft_4:
+      # build: .
+      image: "raft"
+      hostname: "raft"
+      # options:
+      #   - servers: {"nats-server:4222"}
+      networks:
+        - "nats-network"
+      depends_on:
+        - "raft_3"
+    raft_5:
+      # build: .
+      image: "raft"
+      hostname: "raft"
+      # options:
+      #   - servers: {"nats-server:4222"}
+      networks:
+        - "nats-network"
+      depends_on:
+        - "raft_4"
     nats:
       image: "nats:latest"
       hostname: "nats-server"
       expose:
-        - "4222"
         - "8222"
-        - "6222"
+        # - "6222"
       ports:
         - "8222:8222"
       networks:
         - "nats-network"
+      command: "--cluster_name nat-cluster --cluster nats://0.0.0.0:6222 --http_port 8222 "
+    nats-1:
+      image: "nats:latest"
+      hostname: "nats-server-1"
+      # expose:
+      #   - "6222"
+      networks:
+        - "nats-network"
+      command: "--cluster_name nat-cluster --cluster nats://0.0.0.0:6222 --routes=nats://ruser:T0pS3cr3t@nats:6222"
+      depends_on:
+        - "nats"
     
 
   networks:

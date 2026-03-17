@@ -16,6 +16,7 @@ import (
 
 const TIME_FORMAT = "2006-01-02T15:04:05,000"
 
+var maxNodeCount int = 5
 var myNode nodeHost
 var myNodeMode string
 
@@ -28,6 +29,8 @@ var natsConfig comms.NatsConfig = comms.NatsConfig{}
 //
 // ==================================================================
 func init() {
+	// delayRun()
+
 	var _processID string = strconv.FormatInt(int64(os.Getpid()), 16) // this should be unique per process in a real implementation
 	_hostName, _ := os.Hostname()
 	fmt.Printf("RAFT's container hostname is %s\n", _hostName)
@@ -76,6 +79,13 @@ func hostnames(hostname string) {
 	log.Printf("hostname %s Addrs: %v", hostname, addrs)
 }
 
+func delayRun() {
+	_delay := GenerateRandomInt(3000, 15000)
+	fmt.Printf("%v delaying for %v ms\n", time.Now(), _delay)
+	time.Sleep(time.Duration(_delay) * time.Millisecond)
+	fmt.Println("Exiting delay")
+}
+
 // ======================================================
 //
 // ======================================================
@@ -83,6 +93,12 @@ func main() {
 	var _err error
 
 	fmt.Println("Application staring")
+
+	args := os.Args
+	if len(args) > 1 {
+		maxNodeCount, _ = strconv.Atoi(args[1])
+	}
+	fmt.Printf("Max node count set to %v\n", maxNodeCount)
 	myNodeMode = FOLLOWER
 	// _err = comms.Init(`{"url": "nats://localhost:4222"}`)
 
@@ -256,22 +272,24 @@ func electionWorkflow() error {
 			case _msg := <-_electionGoChannel:
 				_randomTimeout.Stop() // now we wait for voting to finish
 				var _electionMessage genericMessage
-				fmt.Println("Received election message:", string(_msg))
 				_err = json.Unmarshal(_msg, &_electionMessage)
 				if _err == nil {
 					switch _electionMessage.RequestId {
 					case nominationtRequestId:
-						fmt.Println(" Another node has requested my vote, I vote for it and become follower")
+						_randomTimeout.Stop() // now we wait for voting to finish
+						// fmt.Println("Another node has requested my voteAnother node has requested my vote, I vote for it and become follower")
 						_err = sendRequest(electionVoteId, _electionMessage.Sender.UniqueId, electionChannel)
-						if _err != nil {
-							break LOOP
-						}
+						// myNodeMode = FOLLOWER
+						// break LOOP
 					case electionVoteId:
-						if _electionMessage.Data == myNode.UniqueId {
-							fmt.Println(" I have received a vote for my leadership")
+						_candidateId := _electionMessage.Data
+						// fmt.Printf("I have received a vote for %s\n", _candidateId)
+						if _candidateId == myNode.UniqueId {
+							// fmt.Printf(" I have received a vote for my leadership %d\n", _noOfVotes)
 							_noOfVotes++
-							if _noOfVotes > (len(statusMap) / 2) {
-								fmt.Println(" I have received majority votes, I become leader")
+
+							if _noOfVotes > (maxNodeCount / 2) {
+								// fmt.Println(" I have received majority votes, I become leader")
 								_err = sendRequest(inaugurationRequestId, myNode.UniqueId, electionChannel)
 								myNodeMode = LEADER
 								break LOOP
@@ -282,12 +300,15 @@ func electionWorkflow() error {
 						myNodeMode = FOLLOWER
 						break LOOP
 					}
+				} else {
+					fmt.Println("Error converting election message from json: ", _err)
 				}
 			case <-_randomTimeout.C:
 				_err = sendRequest(nominationtRequestId, myNode.UniqueId, electionChannel)
 				if _err != nil {
 					break LOOP
 				}
+				_noOfVotes++ // I vote for myself
 			case <-_timeout.C:
 				// This should not happen
 				_err = fmt.Errorf("no resolution of the election within the specified period")
