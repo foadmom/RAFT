@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/foadmom/RAFT/comms"
+	"github.com/foadmom/common/comms"
 	c "github.com/foadmom/common/config"
 )
 
