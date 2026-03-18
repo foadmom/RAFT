@@ -29,8 +29,6 @@ var natsConfig comms.NatsConfig = comms.NatsConfig{}
 //
 // ==================================================================
 func init() {
-	// delayRun()
-
 	var _processID string = strconv.FormatInt(int64(os.Getpid()), 16) // this should be unique per process in a real implementation
 	_hostName, _ := os.Hostname()
 	fmt.Printf("RAFT's container hostname is %s\n", _hostName)
@@ -273,23 +271,22 @@ func electionWorkflow() error {
 				_randomTimeout.Stop() // now we wait for voting to finish
 				var _electionMessage genericMessage
 				_err = json.Unmarshal(_msg, &_electionMessage)
+				// fmt.Printf("*** Election message received %v\n", _electionMessage)
 				if _err == nil {
 					switch _electionMessage.RequestId {
 					case nominationtRequestId:
-						_randomTimeout.Stop() // now we wait for voting to finish
-						// fmt.Println("Another node has requested my voteAnother node has requested my vote, I vote for it and become follower")
-						_err = sendRequest(electionVoteId, _electionMessage.Sender.UniqueId, electionChannel)
-						// myNodeMode = FOLLOWER
-						// break LOOP
+						if _electionMessage.Sender.UniqueId == myNode.UniqueId { // this is my nomination message, I can ignore it
+							continue
+						} else {
+							_randomTimeout.Stop() // now we wait for voting to finish
+							_err = sendRequest(electionVoteId, _electionMessage.Sender.UniqueId, electionChannel)
+						}
 					case electionVoteId:
 						_candidateId := _electionMessage.Data
-						// fmt.Printf("I have received a vote for %s\n", _candidateId)
 						if _candidateId == myNode.UniqueId {
-							// fmt.Printf(" I have received a vote for my leadership %d\n", _noOfVotes)
 							_noOfVotes++
 
 							if _noOfVotes > (maxNodeCount / 2) {
-								// fmt.Println(" I have received majority votes, I become leader")
 								_err = sendRequest(inaugurationRequestId, myNode.UniqueId, electionChannel)
 								myNodeMode = LEADER
 								break LOOP
@@ -311,7 +308,7 @@ func electionWorkflow() error {
 				_noOfVotes++ // I vote for myself
 			case <-_timeout.C:
 				// This should not happen
-				_err = fmt.Errorf("no resolution of the election within the specified period")
+				_err = fmt.Errorf("no resolution of the election within the specified period\n")
 				break LOOP
 			}
 
@@ -337,7 +334,6 @@ func GenerateRandomInt(lower int, upper int) int {
 // ======================================================
 func generateMessage(requestID string, data string) ([]byte, error) {
 	var _time string = time.Now().Format(TIME_FORMAT)
-	// var _time string = string(time.Now().UnixMilli())
 	messageTemplate.Timestamp = _time
 	messageTemplate.RequestId = requestID
 	messageTemplate.Data = data

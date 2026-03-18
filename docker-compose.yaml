@@ -3,7 +3,7 @@
     raft_1:
       # build: .
       image: "raft"
-      hostname: "raft"
+      hostname: "raft_1"
       # options:
       #   - servers: {"nats-server:4222"}
       networks:
@@ -13,7 +13,7 @@
     raft_2:
       # build: .
       image: "raft"
-      hostname: "raft"
+      hostname: "raft_2"
       # options:
       #   - servers: {"nats-server:4222"}
       networks:
@@ -23,7 +23,7 @@
     raft_3:
       # build: .
       image: "raft"
-      hostname: "raft"
+      hostname: "raft_3"
       # options:
       #   - servers: {"nats-server:4222"}
       networks:
@@ -33,7 +33,7 @@
     raft_4:
       # build: .
       image: "raft"
-      hostname: "raft"
+      hostname: "raft_4"
       # options:
       #   - servers: {"nats-server:4222"}
       networks:
@@ -43,7 +43,7 @@
     raft_5:
       # build: .
       image: "raft"
-      hostname: "raft"
+      hostname: "raft_5"
       # options:
       #   - servers: {"nats-server:4222"}
       networks:
