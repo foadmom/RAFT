@@ -44,8 +44,7 @@ go build -o ./bin/ ./...
 echo "***** Building raft docker image"
 sudo docker build -t raft .
 # ====================================
-# echo "***** Create network"
-# sudo docker network create --driver bridge nats
+# start from compose file
 # ====================================
 echo "***** run with compose"
 sudo sudo docker compose up

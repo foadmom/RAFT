@@ -1,17 +1,45 @@
+// ==================================================================
+// The basic flow is as a follower. When a follower suspects the leader is down,
+// it goes into election mode. In election mode, it waits for
+// a random amount of time and if it has been no other nomination,
+// then puts itself forward as a candidate.
+// If by the time it puts itself forward, no other node has put itself forward,
+// then it becomes leader. If another node has put itself forward,
+// then it votes for that node.
+// If a node receives more than 50% of the votes, then it becomes leader
+// and sends an inauguration message to all nodes.
+// When a node receives an inauguration message, it becomes follower.
+//
+//	     ┌────────────┐
+//	     │   Follower ◄─────┐
+//	     └──────┬─────┘     │
+//	            │           │
+//	     ┌──────▼─────┐     │
+//	     │  Election  │     │
+//	     └──┬──────┬──┘     │
+//	        │      │        │
+//	┌───────▼─┐    └────────┤
+//	│ Leader  │             │
+//	└───────┬─┘             │
+//	        │               │
+//	        └───────────────┘
+//
+// ==================================================================
 package main
 
 import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"math/rand"
-	"net"
+
+	// "math/rand"
 	"os"
 	"strconv"
 	"time"
 
 	"github.com/foadmom/common/comms"
 	c "github.com/foadmom/common/config"
+	u "github.com/foadmom/common/utils"
 )
 
 const TIME_FORMAT = "2006-01-02T15:04:05,000"
@@ -47,41 +75,6 @@ func init() {
 	myNodeMode = UNKNOWN
 
 	messageTemplate = genericMessage{heartbeatRequestId, "", myNode, ""}
-}
-
-// ==================================================================
-//
-//	     ┌────────────┐
-//	     │   Follower ◄─────┐
-//	     └──────┬─────┘     │
-//	            │           │
-//	     ┌──────▼─────┐     │
-//	     │  Election  │     │
-//	     └──┬──────┬──┘     │
-//	        │      │        │
-//	┌───────▼─┐    └────────┤
-//	│ Leader  │             │
-//	└───────┬─┘             │
-//	        │               │
-//	        └───────────────┘
-//
-// ==================================================================
-func hostnames(hostname string) {
-	var err error
-	addrs, err := net.LookupIP(hostname) // returns a slice of the IP addresses of the host
-	// lookupIP looks up host using the local resolver. It returns a slice of that host's IPv4 and IPv6 addresses.
-	if err != nil {
-		log.Println("Failed to detect machine host name. ", err.Error())
-		return
-	}
-	log.Printf("hostname %s Addrs: %v", hostname, addrs)
-}
-
-func delayRun() {
-	_delay := GenerateRandomInt(3000, 15000)
-	fmt.Printf("%v delaying for %v ms\n", time.Now(), _delay)
-	time.Sleep(time.Duration(_delay) * time.Millisecond)
-	fmt.Println("Exiting delay")
 }
 
 // ======================================================
@@ -174,7 +167,7 @@ func leaderWorkflow() error {
 				fmt.Println("Received response:", string(resp))
 				var _msg genericMessage
 				// convert response from json and update status map
-				_msg, _err = convertMessageFromJson(resp)
+				_msg, _err = jsonToMessage(resp)
 				if _err == nil {
 					setNodeStatus(_msg)
 					_errCount = 0
@@ -186,6 +179,8 @@ func leaderWorkflow() error {
 				}
 			case <-_HBTicker.C:
 				fmt.Println("Heartbeat interval sending ping.")
+				printStatusReport()
+
 				// send heartbeat and wait for resp
 				_err = sendRequest(heartbeatRequestId, "", heartbeatChannel)
 				if _err == nil {
@@ -198,7 +193,7 @@ func leaderWorkflow() error {
 				}
 			case <-_TimeOutTicker.C:
 				fmt.Println("We should not get here. Something has gone wrong. This means we have not received any responses for a while")
-				printStati()
+				printStatusReport()
 				return _err
 			}
 		}
@@ -223,8 +218,8 @@ func followerWorkflow() error {
 		defer _ticker.Stop()
 		for {
 			select {
-			case msg := <-heartbeatGoChan:
-				fmt.Println("Received heartbeat message:", string(msg))
+			case _ = <-heartbeatGoChan:
+				// fmt.Println("Received heartbeat message:", string(msg))
 				_ticker.Reset(heartbeatTimeoutInterval * time.Millisecond)
 				_err = sendRequest(heartbeatResponseId, HEALTHY, heartbeatResponseChannel)
 				if _err != nil {
@@ -257,7 +252,7 @@ func electionWorkflow() error {
 
 		// every node will backoff for a random amount of time.
 		// If by then no node has put itself forward for leader, then I will put myself forward
-		var _randonmTimer int = GenerateRandomInt(0, int(electionTimeoutInterval))
+		var _randonmTimer int = u.GenerateRandomInt(0, int(electionTimeoutInterval))
 		var _randomTimeout *time.Timer = time.NewTimer((time.Duration(_randonmTimer) * time.Millisecond))
 		defer _randomTimeout.Stop()
 		// we also need a timeout where we call it quits because election has not produced a leader
@@ -320,15 +315,6 @@ func electionWorkflow() error {
 	return _err
 }
 
-// ========================================================
-// the lower limit is inclusive and upper limit is excluded.
-// so the random int is anything from lower to upper-1
-// ========================================================
-func GenerateRandomInt(lower int, upper int) int {
-	var _rand int = rand.Intn(upper-lower) + lower
-	return _rand
-}
-
 // ======================================================
 //
 // ======================================================
@@ -381,16 +367,16 @@ func setNodeStatus(message genericMessage) {
 // ======================================================
 //
 // ======================================================
-func convertMessageFromJson(msg []byte) (genericMessage, error) {
+func jsonToMessage(jMsg []byte) (genericMessage, error) {
 	var _genericMessage genericMessage
-	_err := json.Unmarshal(msg, &_genericMessage)
+	_err := json.Unmarshal(jMsg, &_genericMessage)
 	return _genericMessage, _err
 }
 
 // ======================================================
 //
 // ======================================================
-func printStati() {
+func printStatusReport() {
 	var _now int64 = time.Now().UnixMilli()
 
 	for k, v := range statusMap {
