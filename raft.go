@@ -54,7 +54,10 @@ var messageTemplate genericMessage // used to send heartbeat messages
 var natsConfig comms.NatsConfig = comms.NatsConfig{}
 
 // ==================================================================
-//
+// NodeHost represents a node in the cluster. It has a hostname, process ID and a unique ID.
+// The unique ID is a combination of the hostname and process ID, which should be unique across the cluster.
+// In a real implementation, you might want to use a more robust method of generating unique IDs,
+// such as using a UUID library or a distributed ID generator like Snowflake.
 // ==================================================================
 func init() {
 	var _processID string = strconv.FormatInt(int64(os.Getpid()), 16) // this should be unique per process in a real implementation
@@ -91,7 +94,6 @@ func main() {
 	}
 	fmt.Printf("Max node count set to %v\n", maxNodeCount)
 	myNodeMode = FOLLOWER
-	// _err = comms.Init(`{"url": "nats://localhost:4222"}`)
 
 	var connectionString string = fmt.Sprintf(`{"url": "%s"}`, natsConfig.URL)
 	fmt.Printf("connecting to %s\n", connectionString)
@@ -122,27 +124,14 @@ func main() {
 		}
 	}
 	// Now you can use the comms package to interact with NATS
-	fmt.Println("natsTest completed")
+	fmt.Println("exiting with error: ", _err)
 }
-
-// ======================================================
-//
-// ======================================================
-// func getNatsConfig(fileName string, env string) (string, error) {
-// 	_config, _err := c.GetConfigFromFile(fileName)
-// 	if _err == nil {
-// 		_config, _err = c.GetKeyMap(_config, env)
-// 	}
-// 	return _config, _err
-// }
 
 // ======================================================
 // leaderWorkflow sends heartbeat messages periodically
 // and awaits responses. Every timeout interval, it resets
 // all follower statuses to "unknown"
 // It runs indefinitely.
-// Note: In a real implementation, there would be a way to
-// stop this goroutine gracefully.
 // ======================================================
 func leaderWorkflow() error {
 	myNodeMode = LEADER
@@ -202,7 +191,11 @@ func leaderWorkflow() error {
 }
 
 // ======================================================
-// followerWorkflow monitors heartbeat messages and exits on timeout
+// followerWorkflow waits for heartbeat messages from the leader and responds to them.
+// If it does not receive a heartbeat message within the timeout interval, it assumes the leader is down
+// and exits, which will trigger the election workflow in the main loop.
+// Note: the follower would likely have more responsibilities such as responding to client requests,
+// replicating logs, etc. This is a simplified version for demonstration purposes.
 // ======================================================
 func followerWorkflow() error {
 	var _err error
@@ -237,8 +230,17 @@ func followerWorkflow() error {
 }
 
 // ======================================================
-// Election workflow. This occures when leader is suspected to be down
-// and a new leader must be elected
+// electionWorkflow handles the election process when a follower suspects
+// the leader is down. It waits for a random amount of time and if
+// no other node has put itself forward, it puts itself forward
+// as a candidate. If another node has put itself forward,
+// it votes for that node. If a node receives more than 50% of the votes,
+// it becomes leader and sends an inauguration message to all nodes.
+// When a node receives an inauguration message, it becomes follower.
+// Note: In a real implementation, the election process would
+// likely be more sophisticated and would handle edge cases
+// such as split votes, network partitions, etc.
+// This is a simplified version for demonstration purposes.
 // ======================================================
 func electionWorkflow() error {
 	var _err error
@@ -316,7 +318,7 @@ func electionWorkflow() error {
 }
 
 // ======================================================
-//
+// generateMessage creates a genericMessage struct and converts it to json byte array.
 // ======================================================
 func generateMessage(requestID string, data string) ([]byte, error) {
 	var _time string = time.Now().Format(TIME_FORMAT)
@@ -328,7 +330,13 @@ func generateMessage(requestID string, data string) ([]byte, error) {
 }
 
 // ======================================================
-//
+// sendRequest is a helper function to send a message to a channel.
+// It generates the message based on the requestId and data
+// provided and then sends it to the specified channel.
+// It returns an error if there is an issue with generating the message or sending it.
+// This function is used by both the leader and follower workflows
+// to send messages to each other. // It abstracts away the details of
+// message generation and sending, making the code cleaner and more maintainable.
 // ======================================================
 func sendRequest(requestId string, data string, channel string) error {
 	var _err error
@@ -342,13 +350,17 @@ func sendRequest(requestId string, data string, channel string) error {
 
 // ======================================================
 // sendRequest(requestId string, data string, channel string)
+// This is a heartbeat send to all followers.
+// It is used by the leader to check if followers are alive
 // ======================================================
 func sendHeartbeatRequest() error {
 	return sendRequest(heartbeatRequestId, "", heartbeatChannel)
 }
 
 // ======================================================
-//
+// unsubscribeAll unsubscribes from all channels.
+// This is used when changing modes to avoid receiving
+// messages that are not relevant to the current mode
 // ======================================================
 func unsubscribeAll() {
 
@@ -358,14 +370,17 @@ func unsubscribeAll() {
 }
 
 // ======================================================
-//
+// setNodeStatus updates the status of a node in the status map.
+// The status is based on the data field of the message, which can be "healthy" or "dead".
+// storing the last Message because it contains the timestamp
+// which is used to determine if the node is dead or not.
 // ======================================================
 func setNodeStatus(message genericMessage) {
 	statusMap[message.Sender.UniqueId] = message
 }
 
 // ======================================================
-//
+// jsonToMessage converts a json byte array to a genericMessage struct.
 // ======================================================
 func jsonToMessage(jMsg []byte) (genericMessage, error) {
 	var _genericMessage genericMessage
@@ -374,7 +389,17 @@ func jsonToMessage(jMsg []byte) (genericMessage, error) {
 }
 
 // ======================================================
-//
+// printStatusReport prints the status of all nodes in the status map.
+// It also checks if any node has not sent a heartbeat response
+// within the timeout interval and marks it as "dead".
+// This is used by the leader to monitor the health of the followers.
+// Note: In a real implementation, this would likely be more
+// sophisticated and would not print to the console.
+// It is used here for demonstration purposes.
+// The status report includes the node unique ID, its status (healthy or dead),
+// and the timestamp of the last heartbeat response received.
+// The timestamp is used to determine if the node is dead or
+// not based on the heartbeat timeout interval.
 // ======================================================
 func printStatusReport() {
 	var _now int64 = time.Now().UnixMilli()

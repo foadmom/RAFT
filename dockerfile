@@ -1,4 +1,7 @@
-FROM ubuntu:24.04
+# FROM ubuntu:24.04
+FROM alpine:latest
+
+ENV NATS_SERVER 2.12.5
 
 WORKDIR /app
 
