@@ -1,0 +1,7 @@
+FROM alpine:latest
+WORKDIR /build
+COPY *.go /build
+COPY go.* /build
+COPY config.json ./build
+RUN apk add go
+RUN go build -o raft raft.go
