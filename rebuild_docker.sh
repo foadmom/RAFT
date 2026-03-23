@@ -39,10 +39,12 @@ sudo docker images
 # ====================================
 # ====================================
 echo "***** Building raft binary"
-go build -o ./bin/ ./...
+# go build -o ./bin/ ./...
+CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-extldflags "-static"' -o ./bin/ ./...
 # ====================================
 echo "***** Building raft docker image"
-sudo docker build -t raft .
+# sudo docker build -t raft .
+sudo docker build -f alpine_dockerfile -t raft .
 # ====================================
 # start from compose file
 # ====================================

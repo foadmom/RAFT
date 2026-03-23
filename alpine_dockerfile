@@ -1,7 +1,9 @@
+# CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-extldflags "-static"' -o ./bin/ ./...
+# sudo docker build -t raft --debug -f alpine_dockerfile .
+# 
 FROM alpine:latest
-WORKDIR /build
-COPY *.go /build
-COPY go.* /build
-COPY config.json ./build
-RUN apk add go
-RUN go build -o raft raft.go
+WORKDIR /app
+COPY ./bin/RAFT .
+COPY ./config.json .
+
+ENTRYPOINT ["/app/RAFT"]

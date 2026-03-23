@@ -1,6 +1,6 @@
 github.com/coreos/go-systemd/v22 v22.5.0/go.mod h1:Y58oyj3AT4RCenI/lSvhwexgC+NSVTIJ3seZv2GcEnc=
-github.com/foadmom/common v0.0.0-20260317153337-5fb128bebc68 h1:8SLc8BH/bvzsAPIg5XkhGKY09kDrrTeRg81arNYJjd0=
-github.com/foadmom/common v0.0.0-20260317153337-5fb128bebc68/go.mod h1:vZB0nKIwfAj5Njb3VtcvWZ5gWmE/qN+eqnlqavWOIRc=
+github.com/foadmom/common v0.0.0-20260320144254-44d4187257b4 h1:qKoW4pj5VNVVWHGh+SYjxyG47HYpn6bFzY4OPwtgpos=
+github.com/foadmom/common v0.0.0-20260320144254-44d4187257b4/go.mod h1:vZB0nKIwfAj5Njb3VtcvWZ5gWmE/qN+eqnlqavWOIRc=
 github.com/godbus/dbus/v5 v5.0.4/go.mod h1:xhWf0FNVPg57R7Z0UbKHbJfkEywrmjJnf7w5xrFpKfA=
 github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
 github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=

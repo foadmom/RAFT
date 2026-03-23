@@ -1,3 +1,13 @@
+// for alpine:
+// # CGO_ENABLED=0 GOOS=linux go build -a -ldflags '-extldflags "-static"' -o ./bin/ ./...
+// # sudo docker build -t raft --debug -f alpine_dockerfile .
+// #
+// FROM alpine:latest
+// WORKDIR /app
+// COPY ./bin/RAFT .
+// COPY ./config.json .
+// ENTRYPOINT ["/app/RAFT"]
+
 // ==================================================================
 // The basic flow is as a follower. When a follower suspects the leader is down,
 // it goes into election mode. In election mode, it waits for

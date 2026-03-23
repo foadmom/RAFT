@@ -5,6 +5,14 @@
       hostname: "raft_1"
       networks:
         - "nats-network"
+      deploy:
+        resources:
+          limits:
+            cpus: '0.001'
+            memory: 7M
+          reservations:
+            cpus: '0.0001'
+            memory: 6M
       depends_on:
         - "nats"
     raft_2:
@@ -12,6 +20,14 @@
       hostname: "raft_2"
       networks:
         - "nats-network"
+      deploy:
+        resources:
+          limits:
+            cpus: '0.001'
+            memory: 7M
+          reservations:
+            cpus: '0.0001'
+            memory: 6M
       depends_on:
         - "raft_1"
     raft_3:
@@ -19,6 +35,14 @@
       hostname: "raft_3"
       networks:
         - "nats-network"
+      deploy:
+        resources:
+          limits:
+            cpus: '0.001'
+            memory: 7M
+          reservations:
+            cpus: '0.0001'
+            memory: 6M
       depends_on:
         - "raft_2"
     raft_4:
@@ -26,6 +50,14 @@
       hostname: "raft_4"
       networks:
         - "nats-network"
+      deploy:
+        resources:
+          limits:
+            cpus: '0.001'
+            memory: 7M
+          reservations:
+            cpus: '0.0001'
+            memory: 6M
       depends_on:
         - "raft_3"
     raft_5:
@@ -33,6 +65,14 @@
       hostname: "raft_5"
       networks:
         - "nats-network"
+      deploy:
+        resources:
+          limits:
+            cpus: '0.001'
+            memory: 7M
+          reservations:
+            cpus: '0.0001'
+            memory: 6M
       depends_on:
         - "raft_4"
     nats:
@@ -45,12 +85,28 @@
       networks:
         - "nats-network"
       command: "--cluster_name nat-cluster --cluster nats://0.0.0.0:6222 --http_port 8222 "
+      deploy:
+        resources:
+          limits:
+            cpus: '0.001'
+            memory: 7M
+          reservations:
+            cpus: '0.0001'
+            memory: 6M
     nats-1:
       image: "nats:latest"
       hostname: "nats-server-1"
       networks:
         - "nats-network"
       command: "--cluster_name nat-cluster --cluster nats://0.0.0.0:6222 --routes=nats://ruser:T0pS3cr3t@nats:6222"
+      deploy:
+        resources:
+          limits:
+            cpus: '0.001'
+            memory: 7M
+          reservations:
+            cpus: '0.0001'
+            memory: 6M
       depends_on:
         - "nats"
     
