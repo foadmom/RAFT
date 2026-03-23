@@ -8,10 +8,10 @@
       deploy:
         resources:
           limits:
-            cpus: '0.001'
+            cpus: '0.01'
             memory: 7M
           reservations:
-            cpus: '0.0001'
+            cpus: '0.001'
             memory: 6M
       depends_on:
         - "nats"
@@ -23,10 +23,10 @@
       deploy:
         resources:
           limits:
-            cpus: '0.001'
+            cpus: '0.01'
             memory: 7M
           reservations:
-            cpus: '0.0001'
+            cpus: '0.001'
             memory: 6M
       depends_on:
         - "raft_1"
@@ -38,10 +38,10 @@
       deploy:
         resources:
           limits:
-            cpus: '0.001'
+            cpus: '0.01'
             memory: 7M
           reservations:
-            cpus: '0.0001'
+            cpus: '0.001'
             memory: 6M
       depends_on:
         - "raft_2"
@@ -53,10 +53,10 @@
       deploy:
         resources:
           limits:
-            cpus: '0.001'
+            cpus: '0.01'
             memory: 7M
           reservations:
-            cpus: '0.0001'
+            cpus: '0.001'
             memory: 6M
       depends_on:
         - "raft_3"
@@ -68,10 +68,10 @@
       deploy:
         resources:
           limits:
-            cpus: '0.001'
+            cpus: '0.01'
             memory: 7M
           reservations:
-            cpus: '0.0001'
+            cpus: '0.001'
             memory: 6M
       depends_on:
         - "raft_4"
@@ -88,10 +88,10 @@
       deploy:
         resources:
           limits:
-            cpus: '0.001'
+            cpus: '0.01'
             memory: 7M
           reservations:
-            cpus: '0.0001'
+            cpus: '0.001'
             memory: 6M
     nats-1:
       image: "nats:latest"
@@ -102,10 +102,10 @@
       deploy:
         resources:
           limits:
-            cpus: '0.001'
+            cpus: '0.01'
             memory: 7M
           reservations:
-            cpus: '0.0001'
+            cpus: '0.001'
             memory: 6M
       depends_on:
         - "nats"

@@ -3,6 +3,8 @@ module github.com/foadmom/RAFT
 go 1.26.1
 
 require github.com/foadmom/common v0.0.0-20260320144254-44d4187257b4
+// replace github.com/foadmom/common => ../common
+replace github.com/foadmom/common => ../common
 
 require (
 	github.com/google/uuid v1.6.0 // indirect
