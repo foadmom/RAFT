@@ -1,11 +1,13 @@
   services:
     
     raft_1:
-      image: "raft"
-      hostname: "raft_1"
+      image: "raft:latest"
+      # hostname: "raft_1"
       networks:
         - "nats-network"
       deploy:
+        mode: replicated
+        replicas: 5
         resources:
           limits:
             cpus: '0.1'
@@ -15,66 +17,67 @@
             memory: 6M
       depends_on:
         - "nats"
-    raft_2:
-      image: "raft"
-      hostname: "raft_2"
-      networks:
-        - "nats-network"
-      deploy:
-        resources:
-          limits:
-            cpus: '0.1'
-            memory: 7M
-          reservations:
-            cpus: '0.05'
-            memory: 6M
-      depends_on:
-        - "raft_1"
-    raft_3:
-      image: "raft"
-      hostname: "raft_3"
-      networks:
-        - "nats-network"
-      deploy:
-        resources:
-          limits:
-            cpus: '0.1'
-            memory: 7M
-          reservations:
-            cpus: '0.05'
-            memory: 6M
-      depends_on:
-        - "raft_2"
-    raft_4:
-      image: "raft"
-      hostname: "raft_4"
-      networks:
-        - "nats-network"
-      deploy:
-        resources:
-          limits:
-            cpus: '0.1'
-            memory: 7M
-          reservations:
-            cpus: '0.05'
-            memory: 6M
-      depends_on:
-        - "raft_3"
-    raft_5:
-      image: "raft"
-      hostname: "raft_5"
-      networks:
-        - "nats-network"
-      deploy:
-        resources:
-          limits:
-            cpus: '0.1'
-            memory: 7M
-          reservations:
-            cpus: '0.05'
-            memory: 6M
-      depends_on:
-        - "raft_4"
+      
+    # raft_2:
+    #   image: "raft:latest"
+    #   hostname: "raft_2"
+    #   networks:
+    #     - "nats-network"
+    #   deploy:
+    #     resources:
+    #       limits:
+    #         cpus: '0.1'
+    #         memory: 7M
+    #       reservations:
+    #         cpus: '0.05'
+    #         memory: 6M
+    #   depends_on:
+    #     - "raft_1"
+    # raft_3:
+    #   image: "raft:latest"
+    #   hostname: "raft_3"
+    #   networks:
+    #     - "nats-network"
+    #   deploy:
+    #     resources:
+    #       limits:
+    #         cpus: '0.1'
+    #         memory: 7M
+    #       reservations:
+    #         cpus: '0.05'
+    #         memory: 6M
+    #   depends_on:
+    #     - "raft_2"
+    # raft_4:
+    #   image: "raft:latest"
+    #   hostname: "raft_4"
+    #   networks:
+    #     - "nats-network"
+    #   deploy:
+    #     resources:
+    #       limits:
+    #         cpus: '0.1'
+    #         memory: 7M
+    #       reservations:
+    #         cpus: '0.05'
+    #         memory: 6M
+    #   depends_on:
+    #     - "raft_3"
+    # raft_5:
+    #   image: "raft:latest"
+    #   hostname: "raft_5"
+    #   networks:
+    #     - "nats-network"
+    #   deploy:
+    #     resources:
+    #       limits:
+    #         cpus: '0.1'
+    #         memory: 7M
+    #       reservations:
+    #         cpus: '0.05'
+    #         memory: 6M
+    #   depends_on:
+    #     - "raft_4"
     nats:
       image: "nats:latest"
       hostname: "nats-server"
