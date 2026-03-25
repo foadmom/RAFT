@@ -1,5 +1,6 @@
   services:
     
+# =======================
     raft_1:
       image: "raft:latest"
       # hostname: "raft_1"
@@ -18,6 +19,7 @@
       depends_on:
         - "nats"
       
+# =======================
     # raft_2:
     #   image: "raft:latest"
     #   hostname: "raft_2"
@@ -32,7 +34,9 @@
     #         cpus: '0.05'
     #         memory: 6M
     #   depends_on:
-    #     - "raft_1"
+    #     - "nats"
+    #
+# =======================
     # raft_3:
     #   image: "raft:latest"
     #   hostname: "raft_3"
@@ -47,7 +51,9 @@
     #         cpus: '0.05'
     #         memory: 6M
     #   depends_on:
-    #     - "raft_2"
+    #     - "nats"
+    #
+# =======================
     # raft_4:
     #   image: "raft:latest"
     #   hostname: "raft_4"
@@ -62,7 +68,9 @@
     #         cpus: '0.05'
     #         memory: 6M
     #   depends_on:
-    #     - "raft_3"
+    #     - "nats"
+    #
+# =======================
     # raft_5:
     #   image: "raft:latest"
     #   hostname: "raft_5"
@@ -77,7 +85,15 @@
     #         cpus: '0.05'
     #         memory: 6M
     #   depends_on:
-    #     - "raft_4"
+    #     - "nats"
+    #
+# =======================
+# =======================
+# =======================
+# nats cluster with 2 nodes.
+# =======================
+# =======================
+# =======================
     nats:
       image: "nats:latest"
       hostname: "nats-server"
@@ -96,6 +112,7 @@
           reservations:
             cpus: '0.05'
             memory: 6M
+# =======================
     nats-1:
       image: "nats:latest"
       hostname: "nats-server-1"
@@ -114,6 +131,7 @@
         - "nats"
     
 
+# =======================
   networks:
     nats-network:
       driver: bridge
