@@ -49,6 +49,7 @@ import (
 
 	"github.com/foadmom/common/comms"
 	c "github.com/foadmom/common/config"
+	"github.com/foadmom/common/logger"
 	u "github.com/foadmom/common/utils"
 )
 
@@ -70,6 +71,7 @@ var natsConfig comms.NatsConfig = comms.NatsConfig{}
 // such as using a UUID library or a distributed ID generator like Snowflake.
 // ==================================================================
 func init() {
+	initLogger()
 	var _processID string = strconv.FormatInt(int64(os.Getpid()), 16) // this should be unique per process in a real implementation
 	_hostName, _ := os.Hostname()
 	fmt.Printf("RAFT's container hostname is %s\n", _hostName)
@@ -88,6 +90,27 @@ func init() {
 	myNodeMode = UNKNOWN
 
 	messageTemplate = genericMessage{heartbeatRequestId, "", myNode, ""}
+}
+
+// ======================================================
+//
+// ======================================================
+func initLogger() {
+	// initialize logger
+	var _loggerConfig logger.Config = logger.Config{
+		ConsoleLoggingEnabled: true,
+		EncodeLogsAsJson:      false,
+		FileLoggingEnabled:    false,
+		// Directory:             "/logs",
+		Directory:  "",
+		Filename:   "raft.log",
+		MaxSize:    10, // megabytes
+		MaxBackups: 5,
+		MaxAge:     30, // days
+	}
+	loggerInstance := logger.Instance()
+	loggerInstance.Configure(_loggerConfig)
+	logger.Instance().Print(logger.Trace, "application starting")
 }
 
 // ======================================================
