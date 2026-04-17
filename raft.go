@@ -98,11 +98,11 @@ func init() {
 func initLogger() {
 	// initialize logger
 	var _loggerConfig logger.Config = logger.Config{
-		ConsoleLoggingEnabled: true,
+		ConsoleLoggingEnabled: false,
 		EncodeLogsAsJson:      false,
-		FileLoggingEnabled:    false,
-		// Directory:             "/logs",
-		Directory:  "",
+		FileLoggingEnabled:    true,
+		Directory:             "/logs",
+		// Directory:  "",
 		Filename:   "raft.log",
 		MaxSize:    10, // megabytes
 		MaxBackups: 5,

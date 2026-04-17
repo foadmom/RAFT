@@ -2,7 +2,9 @@
 # sudo docker build -t raft --debug -f alpine_dockerfile .
 # 
 FROM alpine:latest
+
 WORKDIR /app
+
 COPY ./bin/RAFT .
 COPY ./config.json .
 

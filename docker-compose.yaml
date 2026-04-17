@@ -8,13 +8,14 @@
       driver: bridge
   
 # =======================
-  volumes:
-    # - type: bind
-    #   source: /data/workspaces/go/github.com/foadmom/RAFT/logs
-    #   target: /logs
-    #   read_only: false  
-    raft_logs:
-      name: raft_logs
+  # volumes:
+  #   # - type: bind
+  #   #   source: /data/workspaces/go/github.com/foadmom/RAFT/logs
+  #   #   target: /logs
+  #   #   read_only: false  
+  #   logs: 
+  #     external: true
+      
       
 # =======================
 # =======================
@@ -24,6 +25,7 @@
       image: "raft:latest"
       # volumes:
       #   - /data/workspaces/go/github.com/foadmom/RAFT/logs:/logs:rw
+      # command: bash -c "/app/RAFT >> /data/workspaces/go/github.com/foadmom/RAFT/logs/raft.log 2>&1"
       networks:
         - "nats-network"
       deploy:
